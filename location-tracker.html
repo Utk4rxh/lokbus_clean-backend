@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Driver Location Sender</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 500px; margin: 40px auto; }
+    label, input { display: block; margin: 8px 0; }
+    button { margin: 12px 0; padding: 8px 12px; }
+    #status { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>Send Driver Location</h2>
+  <label for="tripId">Trip ID:</label>
+  <input type="text" id="tripId" placeholder="Enter Trip ID">
+
+  <button id="startBtn">Start Sending Location</button>
+  <button id="stopBtn" disabled>Stop</button>
+
+  <div id="status"></div>
+
+  <script>
+    let socket;
+    let watchId;
+    let tripId;
+
+    function logStatus(msg) {
+      document.getElementById('status').innerText = msg;
+    }
+
+    function startLocationUpdates() {
+      tripId = document.getElementById('tripId').value.trim();
+      if (!tripId) {
+        logStatus("Please enter a Trip ID.");
+        return;
+      }
+      socket = io("http://localhost:8000"); // Change URL if needed
+
+      socket.on('connect', () => {
+        logStatus("Connected to server. Joining trip...");
+        socket.emit("join-trip", { tripId });
+      });
+      socket.on('trip-init', (data) => {
+        logStatus("Trip joined. Sending location...");
+        startGeolocation();
+      });
+      socket.on('location-saved', (data) => {
+        logStatus("Location saved! " + JSON.stringify(data));
+      });
+      socket.on('error', (data) => {
+        logStatus("Error: " + data.message);
+      });
+      socket.on('disconnect', () => {
+        logStatus("Disconnected from server.");
+      });
+    }
+
+    function sendLocation(lat, lng, speed, bearing) {
+      if (!socket || !tripId) return;
+      socket.emit("location-update", {
+        tripId,
+        lat,
+        lng,
+        speed,
+        bearing,
+        ts: Date.now()
+      });
+    }
+
+    function startGeolocation() {
+      if (!'geolocation' in navigator) {
+        logStatus("Geolocation not supported.");
+        return;
+      }
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude, speed, heading } = pos.coords;
+          sendLocation(latitude, longitude, speed, heading);
+        },
+        (err) => {
+          logStatus("Geolocation error: " + err.message);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 20000
+        }
+      );
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('startBtn').disabled = true;
+    }
+
+    function stopUpdates() {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      logStatus("Stopped location sending.");
+      document.getElementById('stopBtn').disabled = true;
+      document.getElementById('startBtn').disabled = false;
+    }
+
+    document.getElementById('startBtn').onclick = startLocationUpdates;
+    document.getElementById('stopBtn').onclick = stopUpdates;
+  </script>
+</body>
+</html>
