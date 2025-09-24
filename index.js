@@ -41,7 +41,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(cookieParser());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
