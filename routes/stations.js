@@ -6,7 +6,7 @@ const BusStation = require("../models/BusStation");
 router.get("/:id", async (req, res) => {
   try {
     const station = await BusStation.findById(req.params.id)
-      .select("name code location address facilities operatingHours routes createdAt updatedAt");
+      .select("_id name code location address facilities operatingHours routes createdAt updatedAt");
 
     if (!station) {
       return res.status(404).json({ error: "Station not found" });

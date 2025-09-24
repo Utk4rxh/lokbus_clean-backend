@@ -13,6 +13,7 @@ const { authenticateToken } = require("./middlewares/auth");
 const authRoutes = require("./routes/auth");
 const queryRoutes = require("./routes/query");
 const liveTrackingRoutes = require("./routes/livetracking");
+const stationsRoutes = require("./routes/stations");
 
 const Trip = require("./models/Trip");
 const { shouldSave } = require("./utils/rateLimiter");
@@ -66,6 +67,7 @@ app.use("/auth", authRoutes);
 // Protected API routes
 app.use("/query", authenticateToken, queryRoutes);
 app.use("/live-tracking", authenticateToken, liveTrackingRoutes);
+app.use("/stations", authenticateToken, stationsRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

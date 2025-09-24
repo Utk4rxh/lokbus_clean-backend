@@ -3,7 +3,6 @@ const Route = require("../models/Route");
 const BusStation = require("../models/BusStation");
 const axios = require("axios");
 
-
 // ✅ Get all active bus stations near a point (lng, lat) within radius meters
 async function getNearby(req, res) {
   try {
@@ -29,7 +28,7 @@ async function getNearby(req, res) {
           $maxDistance: parseInt(radius),
         },
       },
-    }).select("name code location address");
+    }).select("_id name code location address facilities operatingHours");
 
     res.json({ count: stations.length, stations });
   } catch (error) {
@@ -37,7 +36,6 @@ async function getNearby(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
-
 
 // ✅ Basic list of ongoing trips by route
 async function getByRoute(req, res) {
@@ -52,7 +50,6 @@ async function getByRoute(req, res) {
     res.status(500).json({ error: "Server error" });
   }
 }
-
 
 // ✅ Get route directions to a specific bus station using OSRM
 async function getDirections(req, res) {
@@ -71,17 +68,14 @@ async function getDirections(req, res) {
       return res.status(400).json({ error: "Invalid coordinates" });
     }
 
-    // 🔹 Find the destination station
-    const station = await BusStation.findById(stationId).select("name code location address");
+    const station = await BusStation.findById(stationId).select("_id name code location address");
     if (!station) {
       return res.status(404).json({ error: "Bus station not found" });
     }
 
-    // 🔹 Origin = user, Destination = station
     const origin = `${longitude},${latitude}`;
     const destination = `${station.location.coordinates[0]},${station.location.coordinates[1]}`;
 
-    // 🔹 Call OSRM API
     const osrmUrl = `http://router.project-osrm.org/route/v1/${mode}/${origin};${destination}`;
     const params = {
       overview: "full",
@@ -90,7 +84,6 @@ async function getDirections(req, res) {
     };
 
     console.log(`OSRM Directions API: ${osrmUrl}`);
-
     const response = await axios.get(osrmUrl, { params });
 
     if (!response.data.routes || response.data.routes.length === 0) {
@@ -100,7 +93,6 @@ async function getDirections(req, res) {
     const route = response.data.routes[0];
     const leg = route.legs[0];
 
-    // 🔹 Response format
     const routeData = {
       station: {
         id: station._id,
@@ -110,7 +102,7 @@ async function getDirections(req, res) {
         address: station.address,
       },
       route: {
-        geometry: route.geometry, // GeoJSON polyline
+        geometry: route.geometry,
         distance: {
           text: (route.distance / 1000).toFixed(2) + " km",
           value: route.distance,
@@ -139,8 +131,6 @@ async function getDirections(req, res) {
   }
 }
 
-
-// ✅ Export all functions
 module.exports = {
   getNearby,
   getByRoute,
